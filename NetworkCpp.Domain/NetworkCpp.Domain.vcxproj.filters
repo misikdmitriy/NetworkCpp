@@ -21,9 +21,18 @@
     <ClCompile Include="interfaces.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="entities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="messagebuffer.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="interfaces.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="entities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

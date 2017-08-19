@@ -6,7 +6,7 @@ interfaces::Identifiable::Identifiable()
 	: m_id(boost::uuids::random_generator()()) {
 }
 
-interfaces::Identifiable::Identifiable(Identifiable&& obj) noexcept
+interfaces::Identifiable::Identifiable(const Identifiable& obj) noexcept
 	: m_id(obj.m_id) {
 }
 

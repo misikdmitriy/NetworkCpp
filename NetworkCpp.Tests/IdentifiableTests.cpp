@@ -7,7 +7,7 @@ using namespace interfaces;
 class IdentifiableTest : public testing::Test {
 };
 
-TEST(IdentifiableTest, CheckId) {
+TEST(IdentifiableTest, IdShouldBeNotNullable) {
 	// arrange
 	Identifiable identifiable;
 	boost::uuids::uuid empty;
@@ -17,7 +17,11 @@ TEST(IdentifiableTest, CheckId) {
 	EXPECT_NE(identifiable.id(), empty);
 }
 
-int main(int argc, char **argv) {
-	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
+TEST(IdentifiableTest, IdShouldBeUnique) {
+	// arrange
+	Identifiable identifiable1, identifiable2;
+
+	// Act
+	// Assert
+	EXPECT_NE(identifiable1.id(), identifiable2.id());
 }

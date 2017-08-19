@@ -7,12 +7,13 @@
 
 #include <ostream>
 #include <string>
+#include <functional>
 
 namespace interfaces {
 	class Identifiable {
 	public:
 		Identifiable();
-		Identifiable(Identifiable &&) noexcept;
+		Identifiable(const Identifiable &) noexcept;
 
 		virtual ~Identifiable() = default;
 

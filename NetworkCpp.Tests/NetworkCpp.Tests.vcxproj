@@ -119,6 +119,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="IdentifiableTests.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="MessageBufferTests.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
