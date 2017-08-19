@@ -2,6 +2,11 @@
 #define _INTERFACES_H_
 
 #include <boost/uuid/uuid.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include <ostream>
+#include <string>
 
 namespace interfaces {
 	class Identifiable {
@@ -14,9 +19,11 @@ namespace interfaces {
 		friend bool operator==(const Identifiable& lhs, const Identifiable& rhs);
 		friend bool operator!=(const Identifiable& lhs, const Identifiable& rhs);
 
+		virtual boost::uuids::uuid id() const;
 
-		virtual boost::uuids::uuid m_id1() const;
-		virtual void set_id(const boost::uuids::uuid& id);
+		friend std::ostream& operator<<(std::ostream& os, const Identifiable& obj) {
+			return os << "id: " << boost::lexical_cast<std::string>(obj.m_id);
+		}
 
 	private:
 		boost::uuids::uuid m_id;

@@ -2,18 +2,22 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
-interfaces::IdentifiableInterface::IdentifiableInterface() 
-	: id(boost::uuids::random_generator()()) {
+interfaces::Identifiable::Identifiable() 
+	: m_id(boost::uuids::random_generator()()) {
 }
 
-interfaces::IdentifiableInterface::IdentifiableInterface(IdentifiableInterface&& obj) noexcept
-	: id(obj.id) {
+interfaces::Identifiable::Identifiable(Identifiable&& obj) noexcept
+	: m_id(obj.m_id) {
 }
 
-bool interfaces::operator==(const interfaces::IdentifiableInterface& lhs, const interfaces::IdentifiableInterface& rhs) {
-	return lhs.id == rhs.id;
+boost::uuids::uuid interfaces::Identifiable::id() const {
+	return m_id;
 }
 
-bool interfaces::operator!=(const interfaces::IdentifiableInterface& lhs, const interfaces::IdentifiableInterface& rhs) {
+bool interfaces::operator==(const interfaces::Identifiable& lhs, const interfaces::Identifiable& rhs) {
+	return lhs.m_id == rhs.m_id;
+}
+
+bool interfaces::operator!=(const interfaces::Identifiable& lhs, const interfaces::Identifiable& rhs) {
 	return !(lhs == rhs);
 }
