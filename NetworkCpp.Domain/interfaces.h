@@ -20,7 +20,7 @@ namespace interfaces {
 		friend bool operator==(const Identifiable& lhs, const Identifiable& rhs);
 		friend bool operator!=(const Identifiable& lhs, const Identifiable& rhs);
 
-		virtual boost::uuids::uuid id() const;
+		boost::uuids::uuid id() const;
 
 		friend std::ostream& operator<<(std::ostream& os, const Identifiable& obj) {
 			return os << "id: " << boost::lexical_cast<std::string>(obj.m_id);

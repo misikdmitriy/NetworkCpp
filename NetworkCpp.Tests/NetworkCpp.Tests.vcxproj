@@ -75,12 +75,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\boost_1_64_0;$(SolutionDir)NetworkCpp.Domain;$(SolutionDir)3rdParty\gtest\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdParty\boost_1_64_0;$(SolutionDir)NetworkCpp.Domain;$(SolutionDir)3rdParty\gmock\include;$(SolutionDir)3rdParty\gtest\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)3rdParty\gtest;$(SolutionDir)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>gtestd.lib;NetworkCpp.Domain.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdParty\gmock;$(SolutionDir)3rdParty\gtest;$(SolutionDir)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>gtestd.lib;gmock.lib;NetworkCpp.Domain.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
@@ -118,9 +118,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EntitiesTests.cpp" />
+    <ClCompile Include="generators.cpp" />
     <ClCompile Include="IdentifiableTests.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MessageBufferTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="generators.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

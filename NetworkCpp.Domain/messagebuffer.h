@@ -12,6 +12,7 @@ namespace entities {
 		static_assert(size > 0, "Size should non-negative and not zero");
 	public:
 		MessageBuffer();
+		MessageBuffer(const MessageBuffer<size>&);
 
 		typedef std::function<void(void*, const Message&)>		onAddListener;
 		typedef std::function<void(void*, const Message&)>		onRemoveListener;
@@ -39,6 +40,7 @@ namespace entities {
 		int											count() const;
 
 		const Message&								operator[](size_t index);
+		const MessageBuffer&						operator=(const MessageBuffer&);
 	private:
 		std::vector<Message>						m_buffer;
 		std::vector<onAddListener>					m_addListeners;
@@ -52,11 +54,12 @@ namespace entities {
 
 	template <int size>
 	MessageBuffer<size>::MessageBuffer() {
-		m_buffer = std::vector<Message>();
+	}
 
-		m_addListeners = std::vector<onAddListener>();
-		m_removeListeners = std::vector<onRemoveListener>();
-		m_clearListeners = std::vector<onClearListener>();
+	template <int size>
+	MessageBuffer<size>::MessageBuffer(const MessageBuffer<size>& buffer) 
+		: MessageBuffer() {
+		*this = buffer;
 	}
 
 	template <int size>
@@ -117,12 +120,12 @@ namespace entities {
 
 	template <int size>
 	void MessageBuffer<size>::remove(const Message& message) {
-		auto pointer = std::find(m_buffer.cbegin(), m_buffer.cend(), message);
+		auto pointer = find(m_buffer.cbegin(), m_buffer.cend(), message);
 		if (pointer == m_buffer.cend()) {
 			return;
 		}
 
-		m_buffer.erase(std::find(m_buffer.cbegin(), m_buffer.cend(), message));
+		m_buffer.erase(find(m_buffer.cbegin(), m_buffer.cend(), message));
 		onRemove(message);
 	}
 
@@ -133,7 +136,12 @@ namespace entities {
 
 	template <int size>
 	int MessageBuffer<size>::indexOf(const Message& message) const {
-		return std::find(m_buffer.cbegin(), m_buffer.cend(), message) - m_buffer.cbegin();
+		auto iterator = find(m_buffer.cbegin(), m_buffer.cend(), message);
+		if (iterator == m_buffer.cend())
+		{
+			return -1;
+		}
+		return iterator - m_buffer.cbegin();
 	}
 
 	template <int size>
@@ -144,6 +152,23 @@ namespace entities {
 	template <int size>
 	const Message& MessageBuffer<size>::operator[](size_t index) {
 		return m_buffer[index];
+	}
+
+	template <int size>
+	const MessageBuffer<size>& MessageBuffer<size>::operator=(const MessageBuffer& buffer) {
+		if (this != &buffer) {
+			this->clear();
+			this->m_clearListeners.clear();
+			this->m_addListeners.clear();
+			this->m_removeListeners.clear();
+
+			this->m_buffer.insert(this->m_buffer.cbegin(), buffer.m_buffer.cbegin(), buffer.m_buffer.cend());
+			this->m_addListeners.insert(this->m_addListeners.cbegin(), buffer.m_addListeners.cbegin(), buffer.m_addListeners.cend());
+			this->m_removeListeners.insert(this->m_removeListeners.cbegin(), buffer.m_removeListeners.cbegin(), buffer.m_removeListeners.cend());
+			this->m_clearListeners.insert(this->m_clearListeners.cbegin(), buffer.m_clearListeners.cbegin(), buffer.m_clearListeners.cend());
+		}
+
+		return *this;
 	}
 
 	template <int size>

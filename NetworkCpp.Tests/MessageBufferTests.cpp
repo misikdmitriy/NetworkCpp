@@ -2,8 +2,10 @@
 
 #include "entities.h"
 #include "messagebuffer.h"
+#include "generators.h"
 
-entities::Message testMessages[] = { entities::Message(), entities::Message(), entities::Message() };
+generators::MessageGenerator messageGenerator;
+entities::Message testMessages[] = { messageGenerator(), messageGenerator(), messageGenerator() };
 
 class MessageBufferTests : public testing::Test {
 };
@@ -26,7 +28,7 @@ TEST(MessageBufferTests, BufferShouldBeLimited) {
 
 TEST(MessageBufferTests, BufferShouldRaiseEventOnAdd) {
 	// arrange
-	auto buffer = entities::MessageBuffer<1>();
+	auto buffer = entities::MessageBuffer<>();
 	auto counter = 0;
 	auto listener = [&](void* sender, const entities::Message& message) {
 		EXPECT_EQ(message, testMessages[0]);
@@ -63,7 +65,7 @@ TEST(MessageBufferTests, BufferShouldNotRaiseEventIfBufferOverfilled) {
 
 TEST(MessageBufferTests, BufferShouldRaiseEventOnRemove) {
 	// arrange
-	auto buffer = entities::MessageBuffer<1>();
+	auto buffer = entities::MessageBuffer<>();
 	auto counter = 0;
 	auto listener = [&](void* sender, const entities::Message& message) {
 		EXPECT_EQ(message, testMessages[0]);
@@ -83,7 +85,7 @@ TEST(MessageBufferTests, BufferShouldRaiseEventOnRemove) {
 
 TEST(MessageBufferTests, BufferShouldNotFailIfMessageIsAbsent) {
 	// arrange
-	auto buffer = entities::MessageBuffer<1>();
+	auto buffer = entities::MessageBuffer<>();
 
 	// act
 	// assert
@@ -92,7 +94,7 @@ TEST(MessageBufferTests, BufferShouldNotFailIfMessageIsAbsent) {
 
 TEST(MessageBufferTests, BufferShouldNotRaiseEventIfMessageIsAbsent) {
 	// arrange
-	auto buffer = entities::MessageBuffer<1>();
+	auto buffer = entities::MessageBuffer<>();
 	auto counter = 0;
 	auto listener = [&](void* sender, const entities::Message& message) {
 		counter++;
@@ -107,4 +109,134 @@ TEST(MessageBufferTests, BufferShouldNotRaiseEventIfMessageIsAbsent) {
 	EXPECT_EQ(counter, 0);
 }
 
-// ToDo: finish tests
+TEST(MessageBufferTests, BufferShouldRaiseEventOnClear) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	auto counter = 0;
+	auto listener = [&](void* sender) {
+		EXPECT_EQ(sender, &buffer);
+		counter++;
+	};
+
+	buffer.addOnClearListener(listener);
+
+	// act
+	buffer.clear();
+
+	// assert
+	EXPECT_EQ(counter, 1);
+}
+
+TEST(MessageBufferTests, ContainsShouldReturnTrue) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	buffer.add(testMessages[0]);
+
+	// act
+	auto result = buffer.contains(testMessages[0]);
+
+	// assert
+	EXPECT_TRUE(result);
+}
+
+TEST(MessageBufferTests, ContainsShouldReturnFalse) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	buffer.add(testMessages[0]);
+
+	// act
+	auto result = buffer.contains(testMessages[1]);
+
+	// assert
+	EXPECT_FALSE(result);
+}
+
+TEST(MessageBufferTests, ContainsShouldReturnFalseIfBufferIsEmpty) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+
+	// act
+	auto result = buffer.contains(testMessages[1]);
+
+	// assert
+	EXPECT_FALSE(result);
+}
+
+TEST(MessageBufferTests, IndexOfShouldReturnCorrectIndex) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	buffer.add(testMessages[0]);
+	buffer.add(testMessages[1]);
+
+	// act
+	auto result = buffer.indexOf(testMessages[1]);
+
+	// assert
+	EXPECT_EQ(result, 1);
+}
+
+TEST(MessageBufferTests, IndexOfShouldReturnCorrectMinusOneIfElementIsAbsent) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	buffer.add(testMessages[0]);
+	buffer.add(testMessages[1]);
+
+	// act
+	auto result = buffer.indexOf(testMessages[2]);
+
+	// assert
+	EXPECT_EQ(result, -1);
+}
+
+TEST(MessageBufferTests, IndexOfShouldReturnCorrectMinusOneIfArrayIsEmpty) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+
+	// act
+	auto result = buffer.indexOf(testMessages[2]);
+
+	// assert
+	EXPECT_EQ(result, -1);
+}
+
+TEST(MessageBufferTests, CountShouldReturnZero) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+
+	// act
+	auto result = buffer.count();
+
+	// assert
+	EXPECT_EQ(result, 0);
+}
+
+TEST(MessageBufferTests, CountShouldReturnCorrectSize) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	buffer.add(testMessages[0]);
+
+	// act
+	auto result = buffer.count();
+
+	// assert
+	EXPECT_EQ(result, 1);
+}
+
+TEST(MessageBufferTests, CopyConstructorShouldCopyBufferAndListeners) {
+	// arrange
+	auto buffer = entities::MessageBuffer<>();
+	auto counter = 0;
+
+	buffer.add(testMessages[0]);
+	buffer.add(testMessages[1]);
+	buffer.addOnAddListener([&](void*, const entities::Message&) { counter++; });
+
+	// act
+	auto result = entities::MessageBuffer<>(buffer);
+
+	result.add(testMessages[2]);
+
+	// assert
+	EXPECT_EQ(result.count(), 3);
+	EXPECT_EQ(counter, 1);
+}
