@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include "entities.h"
-#include "messagebuffer.h"
 #include "generators.h"
 
 generators::MessageGenerator messageGenerator;

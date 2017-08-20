@@ -117,14 +117,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="entities.cpp" />
     <ClCompile Include="interfaces.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="messagebuffer.h" />
+    <ClCompile Include="entities.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="entities.h" />
     <ClInclude Include="interfaces.h" />
+    <ClInclude Include="entities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
