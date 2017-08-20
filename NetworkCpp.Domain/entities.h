@@ -41,9 +41,9 @@ namespace entities {
 
 		bool										isFilled() const;
 
-		void										addOnAddListener(const onAddListener&);
+		void										addAddListener(const onAddListener&);
 		void										addRemoveListener(const onRemoveListener&);
-		void										addOnClearListener(const onClearListener&);
+		void										addClearListener(const onClearListener&);
 
 		std::vector<Message>::iterator				begin();
 		std::vector<Message>::iterator				end();
@@ -98,7 +98,7 @@ namespace entities {
 	}
 
 	template <int size>
-	void MessageBuffer<size>::addOnAddListener(const onAddListener& listener) {
+	void MessageBuffer<size>::addAddListener(const onAddListener& listener) {
 		m_addListeners.push_back(listener);
 	}
 
@@ -108,7 +108,7 @@ namespace entities {
 	}
 
 	template <int size>
-	void MessageBuffer<size>::addOnClearListener(const onClearListener& listener) {
+	void MessageBuffer<size>::addClearListener(const onClearListener& listener) {
 		m_clearListeners.push_back(listener);
 	}
 
@@ -260,21 +260,40 @@ namespace entities {
 		virtual const bool& isUnactive() const;
 		virtual void setIsUnactive(const bool is_unactive);
 	private:
-		std::shared_ptr<MessageBuffer<>>			m_receivedMessages;
-		std::shared_ptr<MessageBuffer<>>			m_buffer;
-		bool										m_isUnactive;
+		std::shared_ptr<const MessageBuffer<>>			m_receivedMessages;
+		std::shared_ptr<const MessageBuffer<>>			m_buffer;
+		bool											m_isUnactive;
 	};
 
+	template <int size = 1>
 	class Channel : public interfaces::Identifiable {
 	public:
 		Channel();
-		Channel(const int size);
 		Channel(const Channel&);
 
 	private:
-		MessageBuffer<>								m_buffer;
-		bool										m_busy;
+		MessageBuffer<size>								m_buffer;
+		bool											m_busy;
 	};
+
+	template <int size>
+	Channel<size>::Channel()
+		: Identifiable() {
+		m_buffer.addAddListener([](MessageBuffer<>* sender,const Message&)
+		{
+			m_busy = sender->isFilled();
+		});
+
+		m_buffer.addRemoveListener([](void*, const Message&)
+		{
+			m_busy = false;
+		});
+
+		m_buffer.addClearListener([](void*)
+		{
+			m_busy = false;
+		});
+	}
 
 	class NodesPair : public interfaces::Identifiable {
 	public:
@@ -282,7 +301,7 @@ namespace entities {
 	private:
 		const Node&								m_first;
 		const Node&								m_second;
-		const Channel&							m_channel;
+		const Channel<2>&						m_channel;
 	};
 }
 

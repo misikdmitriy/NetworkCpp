@@ -69,19 +69,6 @@ entities::MessageBuffer<>& entities::Node::buffer() const {
 	return *m_buffer;
 }
 
-entities::Channel::Channel()
-	: Channel(INT_MAX) {
-}
-
-entities::Channel::Channel(const Channel& channel) {
-	*this = channel;
-}
-
-entities::Channel::Channel(const int size)
-	: Identifiable() {
-	// ToDo: finish
-}
-
 const bool& entities::Node::isUnactive() const {
 	return m_isUnactive;
 }

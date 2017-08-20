@@ -35,7 +35,7 @@ TEST(MessageBufferTests, BufferShouldRaiseEventOnAdd) {
 		counter++;
 	};
 
-	buffer.addOnAddListener(listener);
+	buffer.addAddListener(listener);
 
 	// act
 	buffer.add(testMessages[0]);
@@ -52,7 +52,7 @@ TEST(MessageBufferTests, BufferShouldNotRaiseEventIfBufferOverfilled) {
 		counter++;
 	};
 
-	buffer.addOnAddListener(listener);
+	buffer.addAddListener(listener);
 
 	// act
 	buffer.add(testMessages[0]);
@@ -117,7 +117,7 @@ TEST(MessageBufferTests, BufferShouldRaiseEventOnClear) {
 		counter++;
 	};
 
-	buffer.addOnClearListener(listener);
+	buffer.addClearListener(listener);
 
 	// act
 	buffer.clear();
@@ -228,7 +228,7 @@ TEST(MessageBufferTests, CopyConstructorShouldCopyBufferAndListeners) {
 
 	buffer.add(testMessages[0]);
 	buffer.add(testMessages[1]);
-	buffer.addOnAddListener([&](void*, const entities::Message&) { counter++; });
+	buffer.addAddListener([&](void*, const entities::Message&) { counter++; });
 
 	// act
 	auto result = entities::MessageBuffer<>(buffer);
