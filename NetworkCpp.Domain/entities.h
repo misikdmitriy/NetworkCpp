@@ -31,7 +31,9 @@ namespace entities {
 		static_assert(size > 0, "Size should non-negative and not zero");
 	public:
 		MessageBuffer();
-		MessageBuffer(const MessageBuffer<size>&);
+		MessageBuffer(const MessageBuffer&);
+		template<int copySize>
+		MessageBuffer(const MessageBuffer<copySize>&);
 
 		typedef std::function<void(void*, const Message&)>		onAddListener;
 		typedef std::function<void(void*, const Message&)>		onRemoveListener;
@@ -60,6 +62,8 @@ namespace entities {
 
 		const Message&								operator[](size_t index);
 		const MessageBuffer&						operator=(const MessageBuffer&);
+		template<int copySize>
+		const MessageBuffer&						operator=(const MessageBuffer<copySize>&);
 	private:
 		std::vector<Message>						m_buffer;
 		std::vector<onAddListener>					m_addListeners;
@@ -77,6 +81,13 @@ namespace entities {
 
 	template <int size>
 	MessageBuffer<size>::MessageBuffer(const MessageBuffer<size>& buffer)
+		: MessageBuffer() {
+		*this = buffer;
+	}
+
+	template <int size>
+	template <int copySize>
+	MessageBuffer<size>::MessageBuffer(const MessageBuffer<copySize>& buffer)
 		: MessageBuffer() {
 		*this = buffer;
 	}
@@ -191,6 +202,29 @@ namespace entities {
 	}
 
 	template <int size>
+	template <int copySize>
+	const MessageBuffer<size>& MessageBuffer<size>::operator=(const MessageBuffer<copySize>& buffer) {
+		if (this != &buffer) {
+			if (size > copySize)
+			{
+				throw std::logic_error("cannot copy bigger to smaller buffer");
+			}
+
+			this->clear();
+			this->m_clearListeners.clear();
+			this->m_addListeners.clear();
+			this->m_removeListeners.clear();
+
+			this->m_buffer.insert(this->m_buffer.cbegin(), buffer.m_buffer.cbegin(), buffer.m_buffer.cend());
+			this->m_addListeners.insert(this->m_addListeners.cbegin(), buffer.m_addListeners.cbegin(), buffer.m_addListeners.cend());
+			this->m_removeListeners.insert(this->m_removeListeners.cbegin(), buffer.m_removeListeners.cbegin(), buffer.m_removeListeners.cend());
+			this->m_clearListeners.insert(this->m_clearListeners.cbegin(), buffer.m_clearListeners.cbegin(), buffer.m_clearListeners.cend());
+		}
+
+		return *this;
+	}
+
+	template <int size>
 	void MessageBuffer<size>::onAdd(const Message& added) {
 		for (auto listener : m_addListeners) {
 			listener(this, added);
@@ -229,6 +263,26 @@ namespace entities {
 		std::shared_ptr<MessageBuffer<>>			m_receivedMessages;
 		std::shared_ptr<MessageBuffer<>>			m_buffer;
 		bool										m_isUnactive;
+	};
+
+	class Channel : public interfaces::Identifiable {
+	public:
+		Channel();
+		Channel(const int size);
+		Channel(const Channel&);
+
+	private:
+		MessageBuffer<>								m_buffer;
+		bool										m_busy;
+	};
+
+	class NodesPair : public interfaces::Identifiable {
+	public:
+
+	private:
+		const Node&								m_first;
+		const Node&								m_second;
+		const Channel&							m_channel;
 	};
 }
 
