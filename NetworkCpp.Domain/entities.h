@@ -26,6 +26,14 @@ namespace entities {
 		const std::shared_ptr<const Node>		m_receiver;
 	};
 
+	class MessageBufferObserver {
+	public:
+		virtual ~MessageBufferObserver() = 0;
+		virtual void addListener(void*, const Message&) = 0;
+		virtual void removeListener(void*, const Message&) = 0;
+		virtual void clearListener(void*) = 0;
+	};
+
 	template<int size = INT_MAX>
 	class MessageBuffer {
 		static_assert(size > 0, "Size should non-negative and not zero");
@@ -35,15 +43,12 @@ namespace entities {
 		template<int copySize>
 		MessageBuffer(const MessageBuffer<copySize>&);
 
-		typedef std::function<void(void*, const Message&)>		onAddListener;
-		typedef std::function<void(void*, const Message&)>		onRemoveListener;
-		typedef std::function<void(void*)>						onClearListener;
+		~MessageBuffer();
 
 		bool										isFilled() const;
 
-		void										addAddListener(const onAddListener&);
-		void										addRemoveListener(const onRemoveListener&);
-		void										addClearListener(const onClearListener&);
+		void										addObserver(const MessageBufferObserver*);
+		void										removeObserver(const MessageBufferObserver*);
 
 		std::vector<Message>::iterator				begin();
 		std::vector<Message>::iterator				end();
@@ -66,9 +71,7 @@ namespace entities {
 		const MessageBuffer&						operator=(const MessageBuffer<copySize>&);
 	private:
 		std::vector<Message>						m_buffer;
-		std::vector<onAddListener>					m_addListeners;
-		std::vector<onRemoveListener>				m_removeListeners;
-		std::vector<onClearListener>				m_clearListeners;
+		std::vector<const MessageBufferObserver*>	m_observers;
 
 		void										onAdd(const Message&);
 		void										onClear();
@@ -93,23 +96,28 @@ namespace entities {
 	}
 
 	template <int size>
+	MessageBuffer<size>::~MessageBuffer() {
+		m_buffer.clear();
+		m_observers.clear();
+	}
+
+	template <int size>
 	bool MessageBuffer<size>::isFilled() const {
 		return m_buffer.size() >= size;
 	}
 
 	template <int size>
-	void MessageBuffer<size>::addAddListener(const onAddListener& listener) {
-		m_addListeners.push_back(listener);
+	void MessageBuffer<size>::addObserver(const MessageBufferObserver* observer) {
+		m_observers.push_back(observer);
 	}
 
 	template <int size>
-	void MessageBuffer<size>::addRemoveListener(const onRemoveListener& listener) {
-		m_removeListeners.push_back(listener);
-	}
-
-	template <int size>
-	void MessageBuffer<size>::addClearListener(const onClearListener& listener) {
-		m_clearListeners.push_back(listener);
+	void MessageBuffer<size>::removeObserver(const MessageBufferObserver* observer) {
+		auto iterator = find(m_observers.cbegin(), m_observers.cend(), observer);
+		if (iterator == m_observers.cend()) {
+			return;
+		}
+		m_observers.erase(iterator);
 	}
 
 	template <int size>
@@ -188,14 +196,10 @@ namespace entities {
 	const MessageBuffer<size>& MessageBuffer<size>::operator=(const MessageBuffer& buffer) {
 		if (this != &buffer) {
 			this->clear();
-			this->m_clearListeners.clear();
-			this->m_addListeners.clear();
-			this->m_removeListeners.clear();
+			this->m_observers.clear();
 
 			this->m_buffer.insert(this->m_buffer.cbegin(), buffer.m_buffer.cbegin(), buffer.m_buffer.cend());
-			this->m_addListeners.insert(this->m_addListeners.cbegin(), buffer.m_addListeners.cbegin(), buffer.m_addListeners.cend());
-			this->m_removeListeners.insert(this->m_removeListeners.cbegin(), buffer.m_removeListeners.cbegin(), buffer.m_removeListeners.cend());
-			this->m_clearListeners.insert(this->m_clearListeners.cbegin(), buffer.m_clearListeners.cbegin(), buffer.m_clearListeners.cend());
+			this->m_observers.insert(this->m_observers.cbegin(), buffer.m_observers.cbegin(), buffer.m_observers.cend());
 		}
 
 		return *this;
@@ -211,14 +215,10 @@ namespace entities {
 			}
 
 			this->clear();
-			this->m_clearListeners.clear();
-			this->m_addListeners.clear();
-			this->m_removeListeners.clear();
+			this->m_observers.clear();
 
 			this->m_buffer.insert(this->m_buffer.cbegin(), buffer.m_buffer.cbegin(), buffer.m_buffer.cend());
-			this->m_addListeners.insert(this->m_addListeners.cbegin(), buffer.m_addListeners.cbegin(), buffer.m_addListeners.cend());
-			this->m_removeListeners.insert(this->m_removeListeners.cbegin(), buffer.m_removeListeners.cbegin(), buffer.m_removeListeners.cend());
-			this->m_clearListeners.insert(this->m_clearListeners.cbegin(), buffer.m_clearListeners.cbegin(), buffer.m_clearListeners.cend());
+			this->m_observers.insert(this->m_observers.cbegin(), buffer.m_clearListeners.cbegin(), buffer.m_clearListeners.cend());
 		}
 
 		return *this;
@@ -226,22 +226,22 @@ namespace entities {
 
 	template <int size>
 	void MessageBuffer<size>::onAdd(const Message& added) {
-		for (auto listener : m_addListeners) {
-			listener(this, added);
+		for (auto listener : m_observers) {
+			listener->addListener(this, added);
 		}
 	}
 
 	template <int size>
 	void MessageBuffer<size>::onClear() {
-		for (auto listener : m_clearListeners) {
-			listener(this);
+		for (auto listener : m_observers) {
+			listener->clearListener(this);
 		}
 	}
 
 	template <int size>
 	void MessageBuffer<size>::onRemove(const Message& removed) {
-		for (auto listener : m_removeListeners) {
-			listener(this, removed);
+		for (auto listener : m_observers) {
+			listener->removeListener(this, removed);
 		}
 	}
 
@@ -266,10 +266,16 @@ namespace entities {
 	};
 
 	template <int size = 1>
-	class Channel : public interfaces::Identifiable {
+	class Channel : public interfaces::Identifiable, public MessageBufferObserver {
 	public:
 		Channel();
 		Channel(const Channel&);
+
+		~Channel();
+
+		void addListener(void*, const Message&) override;
+		void removeListener(void*, const Message&) override { m_busy = false; }
+		void clearListener(void*) override { m_busy = false; }
 
 	private:
 		MessageBuffer<size>								m_buffer;
@@ -279,20 +285,26 @@ namespace entities {
 	template <int size>
 	Channel<size>::Channel()
 		: Identifiable() {
-		m_buffer.addAddListener([](MessageBuffer<>* sender,const Message&)
-		{
-			m_busy = sender->isFilled();
-		});
+		m_buffer.addObserver(this);
+		m_busy = false;
+	}
 
-		m_buffer.addRemoveListener([](void*, const Message&)
-		{
-			m_busy = false;
-		});
+	template <int size>
+	Channel<size>::Channel(const Channel& channel)
+		: Identifiable(channel) {
+		m_busy = channel.m_busy;
+		m_buffer = channel.m_buffer;
+	}
 
-		m_buffer.addClearListener([](void*)
-		{
-			m_busy = false;
-		});
+	template <int size>
+	Channel<size>::~Channel() {
+		m_buffer.removeObserver(this);
+	}
+
+	template <int size>
+	void Channel<size>::addListener(void* sender, const Message&) {
+		auto buffer = static_cast<MessageBuffer<>*>(sender);
+		m_busy = buffer->isFilled();
 	}
 
 	class NodesPair : public interfaces::Identifiable {
