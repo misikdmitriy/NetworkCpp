@@ -26,16 +26,60 @@ namespace entities {
 		const std::shared_ptr<const Node>		m_receiver;
 	};
 
-	class MessageBufferObserver {
+	class Observer;
+
+	class Observable {
 	public:
-		virtual ~MessageBufferObserver() = 0;
+		Observable();
+		Observable(const Observable&);
+		
+		virtual ~Observable();
+
+		void								addObserver(const Observer const *);
+		void								removeObserver(const Observer const *);
+
+	protected:
+		std::vector<Observer const *>				m_observers;
+	};
+
+	class Observer {
+	public:
+		Observer(Observable&);
+		Observer(const Observer&);
+
+		virtual ~Observer();
+
+	protected:
+		std::shared_ptr<Observable>			m_observable;
+	};
+
+	class MessageContainerObserver : public Observer {
+	public:
+		MessageContainerObserver(Observable& observable);
+		MessageContainerObserver(const MessageContainerObserver& observer);
+
+		~MessageContainerObserver() override;
+
 		virtual void addListener(void*, const Message&) = 0;
 		virtual void removeListener(void*, const Message&) = 0;
 		virtual void clearListener(void*) = 0;
 	};
 
+	class MessageContainerObservable : public Observable {
+	public:
+		MessageContainerObservable();
+		MessageContainerObservable(const MessageContainerObservable&);
+
+		virtual ~MessageContainerObservable();
+
+	protected:
+		void										onAdd(const Message&);
+		void										onClear();
+		void										onRemove(const Message&);
+	};
+
 	template<int size = INT_MAX>
-	class MessageBuffer {
+	class MessageBuffer : public Observable {
 		static_assert(size > 0, "Size should non-negative and not zero");
 	public:
 		MessageBuffer();
@@ -46,9 +90,6 @@ namespace entities {
 		~MessageBuffer();
 
 		bool										isFilled() const;
-
-		void										addObserver(const MessageBufferObserver*);
-		void										removeObserver(const MessageBufferObserver*);
 
 		std::vector<Message>::iterator				begin();
 		std::vector<Message>::iterator				end();
@@ -71,7 +112,6 @@ namespace entities {
 		const MessageBuffer&						operator=(const MessageBuffer<copySize>&);
 	private:
 		std::vector<Message>						m_buffer;
-		std::vector<const MessageBufferObserver*>	m_observers;
 
 		void										onAdd(const Message&);
 		void										onClear();
@@ -79,12 +119,13 @@ namespace entities {
 	};
 
 	template <int size>
-	MessageBuffer<size>::MessageBuffer() {
+	MessageBuffer<size>::MessageBuffer()
+		: Observable() {
 	}
 
 	template <int size>
 	MessageBuffer<size>::MessageBuffer(const MessageBuffer<size>& buffer)
-		: MessageBuffer() {
+		: Observable(buffer) {
 		*this = buffer;
 	}
 
@@ -104,20 +145,6 @@ namespace entities {
 	template <int size>
 	bool MessageBuffer<size>::isFilled() const {
 		return m_buffer.size() >= size;
-	}
-
-	template <int size>
-	void MessageBuffer<size>::addObserver(const MessageBufferObserver* observer) {
-		m_observers.push_back(observer);
-	}
-
-	template <int size>
-	void MessageBuffer<size>::removeObserver(const MessageBufferObserver* observer) {
-		auto iterator = find(m_observers.cbegin(), m_observers.cend(), observer);
-		if (iterator == m_observers.cend()) {
-			return;
-		}
-		m_observers.erase(iterator);
 	}
 
 	template <int size>
@@ -226,21 +253,21 @@ namespace entities {
 
 	template <int size>
 	void MessageBuffer<size>::onAdd(const Message& added) {
-		for (auto listener : m_observers) {
+		for (MessageContainerObserver* listener : m_observers) {
 			listener->addListener(this, added);
 		}
 	}
 
 	template <int size>
 	void MessageBuffer<size>::onClear() {
-		for (auto listener : m_observers) {
+		for (MessageContainerObserver* listener : m_observers) {
 			listener->clearListener(this);
 		}
 	}
 
 	template <int size>
 	void MessageBuffer<size>::onRemove(const Message& removed) {
-		for (auto listener : m_observers) {
+		for (MessageContainerObserver* listener : m_observers) {
 			listener->removeListener(this, removed);
 		}
 	}
@@ -254,66 +281,56 @@ namespace entities {
 
 		const Node&									operator=(const Node&);
 
-		virtual MessageBuffer<>& receivedMessages() const;
-		virtual MessageBuffer<>& buffer() const;
+		virtual MessageBuffer<>& receivedMessages();
+		virtual MessageBuffer<>& buffer();
 
 		virtual const bool& isUnactive() const;
 		virtual void setIsUnactive(const bool is_unactive);
 	private:
-		std::shared_ptr<const MessageBuffer<>>			m_receivedMessages;
-		std::shared_ptr<const MessageBuffer<>>			m_buffer;
+		std::shared_ptr<MessageBuffer<>>				m_receivedMessages;
+		std::shared_ptr<MessageBuffer<>>				m_buffer;
 		bool											m_isUnactive;
 	};
 
-	template <int size = 1>
-	class Channel : public interfaces::Identifiable, public MessageBufferObserver {
+	class Channel : public interfaces::Identifiable, public Observable {
 	public:
 		Channel();
 		Channel(const Channel&);
 
-		~Channel();
+		~Channel() override;
 
-		void addListener(void*, const Message&) override;
-		void removeListener(void*, const Message&) override { m_busy = false; }
-		void clearListener(void*) override { m_busy = false; }
-
-	private:
-		MessageBuffer<size>								m_buffer;
+	protected:
 		bool											m_busy;
 	};
 
-	template <int size>
-	Channel<size>::Channel()
-		: Identifiable() {
-		m_buffer.addObserver(this);
-		m_busy = false;
-	}
+	class OneWayChannel : public Channel, public MessageContainerObserver {
+	public:
+		OneWayChannel();
+		OneWayChannel(const OneWayChannel&);
 
-	template <int size>
-	Channel<size>::Channel(const Channel& channel)
-		: Identifiable(channel) {
-		m_busy = channel.m_busy;
-		m_buffer = channel.m_buffer;
-	}
+		~OneWayChannel() override;
 
-	template <int size>
-	Channel<size>::~Channel() {
-		m_buffer.removeObserver(this);
-	}
+		void								add(const Message&);
+		const Message&						get();
 
-	template <int size>
-	void Channel<size>::addListener(void* sender, const Message&) {
-		auto buffer = static_cast<MessageBuffer<>*>(sender);
-		m_busy = buffer->isFilled();
-	}
+	private:
+		void						addListener(void*, const Message&) override;
+		void						removeListener(void*, const Message&) override;
+		void						clearListener(void*) override;
+
+	protected:
+		std::shared_ptr<const Message&>					m_message;
+	};
 
 	class NodesPair : public interfaces::Identifiable {
 	public:
 
+		NodesPair(const Node& node, const Node& node1, const Channel& channel);
+
 	private:
 		const Node&								m_first;
 		const Node&								m_second;
-		const Channel<2>&						m_channel;
+		const Channel&							m_channel;
 	};
 }
 
